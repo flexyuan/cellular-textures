@@ -3,7 +3,9 @@
 Based on https://blackpawn.com/texts/cellular/default.html
 
 ## 25 cells
-![alt text](output.png "Sample output")
+<img src="output.png" width="400" height="400" />
 
 ## 500 cells
-![alt text](output1.png "500 cells")
+<img src="output1.png" width="400" height="400" />
+
+
