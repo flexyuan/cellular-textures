@@ -4,7 +4,7 @@ use std::{fmt::Display, fs::File, io::BufWriter, str::FromStr};
 
 // based on https://blackpawn.com/texts/cellular/default.html
 fn main() {
-    let rng = fastrand::Rng::with_seed(13);
+    let rng = fastrand::Rng::with_seed(0);
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() != 3 {
         eprintln!("Usage: {} PIXELS CELLS", args[0]);
@@ -24,28 +24,27 @@ fn main() {
     let mut pixels: Vec<u8> = vec![0; bounds.0 * bounds.1];
 
     render(&bounds, &mut pixels, &cells);
-    write_image("test.png", &mut pixels, bounds).unwrap()
+    write_image("output.png", &mut pixels, bounds).unwrap()
 }
 
-fn dist(a: &(usize, usize), b: &(usize, usize)) -> f64 {
-    ((a.0.abs_diff(b.0) as f64).powi(2) + (a.1.abs_diff(b.1) as f64).powi(2)).sqrt()
+fn wrap_dist(a: &(usize, usize), b: &(usize, usize), bounds: &(usize, usize)) -> f64 {
+    let mut dx = a.0.abs_diff(b.0) as f64;
+    let mut dy = a.1.abs_diff(b.1) as f64;
+    let width = bounds.0 as f64;
+    let height = bounds.0 as f64;
+    if dx > width / 2.0 {
+        dx = width - dx;
+    }
+    if dy > height / 2.0 {
+        dy = height - dy;
+    }
+    (dx.powi(2) + dy.powi(2)).sqrt()
 }
 
-#[test]
-fn test_dist() {
-    let a: (usize, usize) = (0, 2);
-    let b: (usize, usize) = (5, 5);
-    let v1 = (a.0.abs_diff(b.0) as f64).powi(2);
-    let v2 = (a.1.abs_diff(b.1) as f64).powi(2);
-    let j = (v1 + v2).sqrt();
-    let k = (((a.0.abs_diff(b.0) as f64).powi(2) + (a.1.abs_diff(b.1) as f64)).powi(2)).sqrt();
-    println!("v1:{} v2:{} j:{} k:{}", v1, v2, j, k);
-}
-
-fn find_nearest((r, c): (usize, usize), cells: &[(usize, usize)]) -> f64 {
-    let mut mindist = dist(&cells[0], &(r, c));
+fn find_nearest((r, c): (usize, usize), cells: &[(usize, usize)], bounds: &(usize, usize)) -> f64 {
+    let mut mindist = wrap_dist(&cells[0], &(r, c), bounds);
     for i in cells {
-        let k = dist(&i, &(r, c));
+        let k = wrap_dist(&i, &(r, c), bounds);
         if k < mindist {
             mindist = k;
         }
@@ -57,7 +56,7 @@ fn render(bounds: &(usize, usize), pixels: &mut [u8], cells: &[(usize, usize)]) 
     let mut distance: Vec<f64> = vec![0.0; (bounds.0 * bounds.1) as usize];
     for i in 0..bounds.0 {
         for j in 0..bounds.1 {
-            distance[(i * bounds.1) + j] = find_nearest((i, j), cells);
+            distance[(i * bounds.1) + j] = find_nearest((i, j), cells, &bounds);
         }
     }
     let maxdist = distance.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
