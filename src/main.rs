@@ -17,7 +17,7 @@ fn main() {
     let cell_count =
         usize::from_str(&args[2]).expect(&format!("Unexpected cell counts: {}", &args[2]));
 
-    let mut cells: Vec<(usize, usize)> = vec![(5, 5)];
+    let mut cells: Vec<(usize, usize)> = Vec::new();
     for _ in 0..cell_count {
         cells.push((rng.usize(0..bounds.0), rng.usize(0..bounds.1)));
     }
