@@ -34,11 +34,7 @@ fn find_nearest(p: (usize, usize), tree: &KdTree, bounds: &(usize, usize)) -> f6
         (p.0, bounds.1 - p.1),
         (p.0, bounds.1 + p.1),
         (p.0 + bounds.0, p.1),
-        (p.0 + bounds.0, bounds.1 - p.1),
-        (p.0 + bounds.0, bounds.1 + p.1),
         (bounds.0 - p.0, p.1),
-        (bounds.0 - p.0, bounds.1 - p.1),
-        (bounds.0 - p.0, bounds.1 + p.1),
     ];
     mirrors
         .iter()
