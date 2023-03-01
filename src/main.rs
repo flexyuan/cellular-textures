@@ -1,3 +1,4 @@
+use cellular_textures::KdTree;
 use png::EncodingError;
 
 use std::{fmt::Display, fs::File, io::BufWriter, str::FromStr};
@@ -8,7 +9,7 @@ fn main() {
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() != 3 {
         eprintln!("Usage: {} PIXELS CELLS", args[0]);
-        eprintln!("Example: {} 3000*3000 10", args[0]);
+        eprintln!("Example: {} 3000x3000 10", args[0]);
         std::process::exit(1);
     }
 
@@ -27,36 +28,32 @@ fn main() {
     write_image("output.png", &mut pixels, bounds).unwrap()
 }
 
-fn wrap_dist(a: &(usize, usize), b: &(usize, usize), bounds: &(usize, usize)) -> f64 {
-    let mut dx = a.0.abs_diff(b.0) as f64;
-    let mut dy = a.1.abs_diff(b.1) as f64;
-    let width = bounds.0 as f64;
-    let height = bounds.0 as f64;
-    if dx > width / 2.0 {
-        dx = width - dx;
-    }
-    if dy > height / 2.0 {
-        dy = height - dy;
-    }
-    (dx.powi(2) + dy.powi(2)).sqrt()
-}
-
-fn find_nearest((r, c): (usize, usize), cells: &[(usize, usize)], bounds: &(usize, usize)) -> f64 {
-    let mut mindist = wrap_dist(&cells[0], &(r, c), bounds);
-    for i in cells {
-        let k = wrap_dist(&i, &(r, c), bounds);
-        if k < mindist {
-            mindist = k;
-        }
-    }
-    mindist
+fn find_nearest(p: (usize, usize), tree: &KdTree, bounds: &(usize, usize)) -> f64 {
+    let mirrors = [
+        (p.0, p.1),
+        (p.0, bounds.1 - p.1),
+        (p.0, bounds.1 + p.1),
+        (p.0 + bounds.0, p.1),
+        (p.0 + bounds.0, bounds.1 - p.1),
+        (p.0 + bounds.0, bounds.1 + p.1),
+        (bounds.0 - p.0, p.1),
+        (bounds.0 - p.0, bounds.1 - p.1),
+        (bounds.0 - p.0, bounds.1 + p.1),
+    ];
+    mirrors
+        .iter()
+        .map(|p| tree.mindist(*p))
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap()
+        .0
 }
 
 fn render(bounds: &(usize, usize), pixels: &mut [u8], cells: &[(usize, usize)]) {
     let mut distance: Vec<f64> = vec![0.0; (bounds.0 * bounds.1) as usize];
+    let tree = KdTree::new(cells.to_vec());
     for i in 0..bounds.0 {
         for j in 0..bounds.1 {
-            distance[(i * bounds.1) + j] = find_nearest((i, j), cells, &bounds);
+            distance[(i * bounds.1) + j] = find_nearest((i, j), &tree, bounds);
         }
     }
     let maxdist = distance.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
