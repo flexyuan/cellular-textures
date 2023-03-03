@@ -24,7 +24,7 @@ fn main() {
     }
     let mut pixels: Vec<u8> = vec![0; bounds.0 * bounds.1];
 
-    render(&bounds, &mut pixels, &cells);
+    render(&bounds, &mut pixels, cells);
     write_image("output.png", &mut pixels, bounds).unwrap()
 }
 
@@ -32,9 +32,8 @@ fn find_nearest(p: (usize, usize), tree: &KdTree, bounds: &(usize, usize)) -> f6
     let mirrors = [
         (p.0, p.1),
         (p.0, bounds.1 - p.1),
-        (p.0, bounds.1 + p.1),
-        (p.0 + bounds.0, p.1),
         (bounds.0 - p.0, p.1),
+        (bounds.0 - p.0, bounds.1 - p.1),
     ];
     mirrors
         .iter()
@@ -44,7 +43,7 @@ fn find_nearest(p: (usize, usize), tree: &KdTree, bounds: &(usize, usize)) -> f6
         .0
 }
 
-fn render(bounds: &(usize, usize), pixels: &mut [u8], cells: &[(usize, usize)]) {
+fn render(bounds: &(usize, usize), pixels: &mut [u8], cells: Vec<(usize, usize)>) {
     let mut distance: Vec<f64> = vec![0.0; (bounds.0 * bounds.1) as usize];
     let tree = KdTree::new(cells.to_vec());
     for i in 0..bounds.0 {
