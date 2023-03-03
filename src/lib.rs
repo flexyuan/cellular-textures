@@ -24,7 +24,7 @@ pub struct KdTree {
 }
 
 impl KdTree {
-    pub fn mindist(self: &Self, p: Point) -> (f64, Point) {
+    pub fn mindist(self: &Self, p: &Point) -> (f64, Point) {
         let result = nodedistance(&self.root, &p, 0);
         (result.0.sqrt(), result.1)
     }
@@ -80,6 +80,7 @@ fn nodedistance(node: &NewNode<Point>, p: &Point, depth: u32) -> (f64, Point) {
         }
         NewNode::Branch(left, right, value) => {
             let pdist = (sqr_distance(value, p), *value);
+
             let helper = |p1: &NewNode<Point>, p2: &NewNode<Point>| {
                 let p1_dist = nodedistance(p1, p, depth + 1);
                 let ortho_dist = if depth % 2 == 0 {
@@ -88,7 +89,7 @@ fn nodedistance(node: &NewNode<Point>, p: &Point, depth: u32) -> (f64, Point) {
                     value.1.abs_diff(p.1)
                 };
                 let sm = smaller(p1_dist, pdist);
-                if (ortho_dist as f64) <= sm.0 {
+                if (ortho_dist as f64) < sm.0 {
                     smaller(nodedistance(p2, p, depth + 1), sm)
                 } else {
                     sm
@@ -122,6 +123,8 @@ fn nodedistance(node: &NewNode<Point>, p: &Point, depth: u32) -> (f64, Point) {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use super::*;
     use test::Bencher;
     #[test]
@@ -129,7 +132,7 @@ mod tests {
         let a = vec![(5, 4), (2, 6), (13, 3), (3, 1), (10, 2), (8, 7)];
         let tree = KdTree::new(a);
         println!("{:?}", tree);
-        println!("{:?}", tree.mindist((9, 4)));
+        println!("{:?}", tree.mindist(&(9, 4)));
     }
 
     #[test]
@@ -144,7 +147,7 @@ mod tests {
         for i in 0..1000 {
             for j in 0..1000 {
                 let p = (i, j);
-                let tree_dist = tree.mindist(p);
+                let tree_dist = tree.mindist(&p);
                 let (brute_dist, minpos) = find_nearest(p, &cells);
                 if tree_dist.0 != brute_dist {
                     panic!("failed for {:?}. Correct pos: {:?}", p, minpos);
@@ -168,40 +171,40 @@ mod tests {
 
     #[bench]
     fn bench_kdtree(b: &mut Bencher) {
+        let rng = fastrand::Rng::with_seed(100);
+        let mut cells = Vec::new();
+        for _ in 0..1000 {
+            cells.push((rng.usize(0..1000), rng.usize(0..1000)));
+        }
+        let tree = KdTree::new(cells);
+        let points = (0..100)
+            .map(|_| (rng.usize(0..1000), rng.usize(0..1000)))
+            .collect::<Vec<Point>>();
         b.iter(|| {
-            let rng = fastrand::Rng::with_seed(100);
-            let mut cells = Vec::new();
-            for _ in 0..1000 {
-                cells.push((rng.usize(0..1000), rng.usize(0..1000)));
-            }
-            let tree = KdTree::new(cells);
-
-            for i in 0..1000 {
-                for j in 0..1000 {
-                    let p = (i, j);
-                    let dummy = tree.mindist(p);
-                    test::black_box(dummy);
-                }
+            for p in &points {
+                let dummy = tree.mindist(p);
+                test::black_box(dummy);
             }
         });
     }
 
     #[bench]
     fn bench_bruteforce(b: &mut Bencher) {
+        let rng = fastrand::Rng::with_seed(100);
+        let mut cells = Vec::new();
+        for _ in 0..1000 {
+            cells.push((rng.usize(0..1000), rng.usize(0..1000)));
+        }
+        let points = Rc::new(
+            (0..100)
+                .map(|_| (rng.usize(0..1000), rng.usize(0..1000)))
+                .collect::<Vec<Point>>(),
+        );
         b.iter(|| {
-            let rng = fastrand::Rng::with_seed(100);
-            let mut cells = Vec::new();
-            for _ in 0..1000 {
-                cells.push((rng.usize(0..1000), rng.usize(0..1000)));
-            }
-
-            for i in 0..1000 {
-                for j in 0..1000 {
-                    let p = (i, j);
-                    let dummy = find_nearest(p, &cells);
-                    test::black_box(dummy);
-                }
-            }
+            points.as_ref().iter().for_each(|p| {
+                let dummy = find_nearest(*p, &cells);
+                test::black_box(dummy);
+            });
         });
     }
 }

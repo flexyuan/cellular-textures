@@ -37,7 +37,7 @@ fn find_nearest(p: (usize, usize), tree: &KdTree, bounds: &(usize, usize)) -> f6
     ];
     mirrors
         .iter()
-        .map(|p| tree.mindist(*p))
+        .map(|p| tree.mindist(p))
         .min_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap()
         .0
